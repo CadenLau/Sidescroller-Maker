@@ -274,7 +274,7 @@ class GameView(arcade.View):
         ):
             self.player.set_state("fall")
             self.player.on_ground = False
-            self.physics_engine.jumps_since_ground = 1
+            self.physics_engine.jumps_since_ground = JUMPS - 1
         # check if player is on ground properly
         if not self.player.on_ground:
             if self.player.state in ("jump", "fall") and self.player.change_y == 0:
