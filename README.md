@@ -33,25 +33,30 @@ A simple sidescroller engine built with the Python Arcade library. Can be used t
 
 ## Usage
 ### Built-In Functions
-Instantiate the game window:
-    
-    make_game(window_width=800  
-    window_height=600, parallax=True)  
-Create the player:
+Create the window:
 
-    make_player(scale=1.0, jump_speed=20, walk_speed=8)
+    make_window(width=800, height=600, title="Sidescroller Engine") -> arcade.Window
+Create the game (make_window(), make_player, and window.width * 2 will be passed to [window], [player], and [level_width], respectively, when make_game() is run if no arguments are given for each):
+    
+    make_game(window: arcade.Window = None, player: Player = None, level_width=None, parallax_scroll=True, gravity=1.0) -> GameView
+Create the player ([jumps] must be greater than 0):
+
+    make_player(scale=1.0, start_x=100, center_y=200, jumps=2, jump_speed=20, movement_speed=8) -> Player
 Create an enemy:
 
-    make_enemy(center_x, center_y, scale=1.0)
+    make_enemy(center_x, center_y, scale=0.5) -> None
 Create a coin:
 
-    make_coin(center_x, center_y, scale=0.7)
+    make_coin(center_x, center_y, scale=0.7) -> None
 Create a player:
 
-    make_platform(width=300, height= 40, center_x, center_y)
+    make_platform(center_x, center_y, width=300, height=40) -> None
 Create a ground across the bottom of the entire level:
 
-    make_ground()
+    make_ground() -> None
+Run the game
+
+    run(game: GameView) -> None
 
 ### Player Controls
 | Key | Action |
