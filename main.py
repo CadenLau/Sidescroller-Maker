@@ -1,20 +1,18 @@
 # Todo
-# - update engine and maker functionality to make a game win condition (collect all coins?)
-# - expansion: custom window size and level width
 # - clean up format
 # - update README.md
 
 import arcade
-from engine import *
 import view
+from engine import *
 
-window = make_window(title="Sidecroller Maker")
+window = make_window(title="Sidescroller Maker")
 
 TILE_SIZE = 40
-COIN_SCALE = TILE_SIZE / 64 - 0.05
+COIN_SCALE = TILE_SIZE / 64 - 0.05  # slightly smaller than tile
 ENEMY_SCALE = TILE_SIZE / 128
-PLAYER_SCALE = 80 / 92
-X_SCALE = 0.7
+PLAYER_SCALE = 80 / 92  # two tile height
+X_SCALE = 0.7  # slightly smaller than tile
 
 
 class Builder(arcade.Sprite):
@@ -96,8 +94,6 @@ class MakerView(arcade.View):
         self.builder_draw.draw()
 
     def on_update(self, delta_time) -> None:
-        self.builder.update(delta_time)
-
         self.camera.position = self.builder.position
         self.camera.position = arcade.camera.grips.constrain_xy(
             self.camera.view_data, self.camera_bounds
@@ -105,10 +101,10 @@ class MakerView(arcade.View):
 
     def resolve_game_collisions(self, sprite) -> None:
         ground_overlap = arcade.check_for_collision_with_list(
-            sprite, self.game.ground_list
+            sprite, self.game.platform_list
         )
         if ground_overlap:
-            self.game.ground_list.remove(ground_overlap[0])
+            self.game.platform_list.remove(ground_overlap[0])
 
         enemy_overlap = arcade.check_for_collision_with_list(
             sprite, self.game.enemy_list
@@ -135,6 +131,7 @@ class MakerView(arcade.View):
             self.resolve_game_collisions(sprite)
 
     def on_key_press(self, symbol, modifiers) -> None:
+        # start game
         if symbol == arcade.key.ENTER:
             # clone the game to keep original state safe
             game = make_game(
@@ -145,7 +142,7 @@ class MakerView(arcade.View):
                     start_y=self.game.player.start_y,
                 ),
             )
-            for platform in self.game.ground_list:
+            for platform in self.game.platform_list:
                 game.make_platform(
                     center_x=platform.center_x,
                     center_y=platform.center_y,
@@ -162,6 +159,7 @@ class MakerView(arcade.View):
                 )
             run(game)
 
+        # place build
         if symbol == arcade.key.SPACE:
             if self.textures_indices[self.builder.cur_texture_index] == "player":
                 self.game.player.position = self.builder.center_x, self.builder.center_y
@@ -225,6 +223,7 @@ class MakerView(arcade.View):
                 )
                 self.resolve_maker_collisions(delete)
 
+        # change builder build
         if symbol == arcade.key.KEY_1:
             if self.builder.cur_texture_index != 0:
                 self.builder.center_y += TILE_SIZE / 2
@@ -253,6 +252,7 @@ class MakerView(arcade.View):
             self.builder.cur_texture_index = 4
             self.builder.set_texture(self.builder.cur_texture_index)
 
+        # move builder
         if symbol == arcade.key.LEFT:
             if self.builder.center_x > TILE_SIZE:
                 self.builder.center_x -= TILE_SIZE
@@ -266,6 +266,7 @@ class MakerView(arcade.View):
             if self.builder.center_y > TILE_SIZE:
                 self.builder.center_y -= TILE_SIZE
 
+        # correct scale
         if self.textures_indices[self.builder.cur_texture_index] == "player":
             self.builder.scale = PLAYER_SCALE
         elif self.textures_indices[self.builder.cur_texture_index] == "platform":

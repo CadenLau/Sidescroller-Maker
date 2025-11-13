@@ -32,6 +32,7 @@ def create_starfield(
 
 
 CAMERA_PAN_SPEED = 0.3
+FONT_SIZE = 16
 
 
 class Player(arcade.Sprite):
@@ -161,9 +162,10 @@ class Player(arcade.Sprite):
 def make_player(
     scale=1.0, start_x=100, start_y=200, jumps=2, jump_speed=20, movement_speed=8
 ) -> Player:
+    """Precondition: jumps > 0."""
     walk = []
     for filename in sorted(os.listdir("assets/images/walk")):
-        walk.append(arcade.load_texture("assets/images/walk" + "/" + filename))
+        walk.append(arcade.load_texture(f"assets/images/walk/{filename}"))
     # walk = arcade.load_spritesheet("assets/images/p1_walk.png").get_texture_grid(size=(72, 97), columns=3, count=11)
     # ^^^ p1_walk.png doesn't have the images in an even grid ^^^
     animations = {
@@ -211,7 +213,7 @@ class GameView(arcade.View):
         self.sprites = arcade.SpriteList()
         self.sprites.append(self.player)
 
-        self.ground_list = arcade.SpriteList()
+        self.platform_list = arcade.SpriteList()
         self.enemy_list = arcade.SpriteList()
         self.coin_list = arcade.SpriteList()
 
@@ -228,6 +230,38 @@ class GameView(arcade.View):
             self.window.height / 2.0,
         )
 
+        self.collected_coins = 0
+        self.total_coins = 0
+        self.coins_text = arcade.Text(
+            f"coins collected: {self.collected_coins} / {self.total_coins}",
+            10,
+            window.height - 25,
+            arcade.color.WHITE,
+            FONT_SIZE,
+            align="left",
+        )
+
+        self.enemies_defeated = 0
+        self.total_enemies = 0
+        self.enemies_text = arcade.Text(
+            f"enemies defeated: {self.enemies_defeated} / {self.total_enemies}",
+            10,
+            window.height - 50,
+            arcade.color.WHITE,
+            FONT_SIZE,
+            align="left",
+        )
+
+        self.death_count = 0
+        self.death_text = arcade.Text(
+            f"death count: {self.death_count}",
+            10,
+            window.height - 75,
+            arcade.color.WHITE,
+            FONT_SIZE,
+            align="left",
+        )
+
     def on_draw(self) -> None:
         self.camera.use()
         self.clear()
@@ -235,13 +269,12 @@ class GameView(arcade.View):
             self.bg_stars.draw()
             self.fg_stars.draw()
         self.sprites.draw()
-        self.ground_list.draw()
+        self.platform_list.draw()
         self.enemy_list.draw()
         self.coin_list.draw()
-        # self.sprites.draw_hit_boxes(arcade.color.WHITE)
-        # self.ground_list.draw_hit_boxes(arcade.color.WHITE)
-        # self.enemy_list.draw_hit_boxes(arcade.color.WHITE)
-        # self.coin_list.draw_hit_boxes(arcade.color.WHITE)
+        self.coins_text.draw()
+        self.enemies_text.draw()
+        self.death_text.draw()
 
     def on_update(self, delta_time) -> None:
         self.player.update(delta_time)
@@ -250,10 +283,13 @@ class GameView(arcade.View):
         self.player.center_x = arcade.math.clamp(
             self.player.center_x, self.left_edge, self.right_edge
         )
+        # check if player fell off screen
         if self.player.center_y < -self.player.height / 2:
             self.player.position = self.player.start_x, self.player.start_y
             self.player.change_x = 0
             self.player.change_y = 0
+            self.death_count += 1
+            self.death_text.text = f"death count: {self.death_count}"
 
         # check for falling
         if (
@@ -286,22 +322,36 @@ class GameView(arcade.View):
             if enemy_hit:
                 if not self.player.attacking:
                     self.player.position = self.player.start_x, self.player.start_y
+                    self.death_count += 1
+                    self.death_text.text = f"death count: {self.death_count}"
                 else:
                     self.enemy_list.remove(enemy_hit[0])
+                    self.enemies_defeated += 1
+                    self.enemies_text.text = f"enemies defeated: {self.enemies_defeated} / {self.total_enemies}"
 
         if self.coin_list:
             coin_hit = arcade.check_for_collision_with_list(self.player, self.coin_list)
             if coin_hit:
                 self.coin_list.remove(coin_hit[0])
+                self.collected_coins += 1
+                self.coins_text.text = (
+                    f"coins collected: {self.collected_coins} / {self.total_coins}"
+                )
 
         # save old position for parallax scrolling
-        old_postion = self.camera.position
+        old_position = self.camera.position
         self.pan_camera_to_player(CAMERA_PAN_SPEED)
+        self.move_text_with_camera()
         if self.parallax_scroll:
-            self.scroll_background(old_postion)
+            self.scroll_background(old_position)
 
-    def scroll_background(self, old_postion) -> None:
-        position_difference = self.camera.position - old_postion
+    def move_text_with_camera(self) -> None:
+        self.coins_text.x = self.camera.center_left.x + 10
+        self.enemies_text.x = self.camera.center_left.x + 10
+        self.death_text.x = self.camera.center_left.x + 10
+
+    def scroll_background(self, old_position) -> None:
+        position_difference = self.camera.position - old_position
         self.fg_stars.center_x += position_difference.x * self.fg_star_speed
         self.bg_stars.center_x += position_difference.x * self.bg_star_speed
 
@@ -327,7 +377,7 @@ class GameView(arcade.View):
 
     def setup_physics(self) -> None:
         self.physics_engine = arcade.PhysicsEnginePlatformer(
-            self.player, self.ground_list, gravity_constant=self.gravity
+            self.player, self.platform_list, gravity_constant=self.gravity
         )
         if self.player.jumps > 1:
             self.physics_engine.enable_multi_jump(self.player.jumps)
@@ -337,6 +387,10 @@ class GameView(arcade.View):
             arcade.Sprite(
                 ":resources:/images/enemies/slimeBlock.png", scale, center_x, center_y
             )
+        )
+        self.total_enemies += 1
+        self.enemies_text.text = (
+            f"enemies defeated: {self.enemies_defeated} / {self.total_enemies}"
         )
 
     def make_coin(self, center_x, center_y, scale=0.7) -> None:
@@ -348,9 +402,13 @@ class GameView(arcade.View):
                 center_y,
             )
         )
+        self.total_coins += 1
+        self.coins_text.text = (
+            f"coins collected: {self.collected_coins} / {self.total_coins}"
+        )
 
     def make_platform(self, center_x, center_y, width=300, height=40) -> None:
-        self.ground_list.append(
+        self.platform_list.append(
             arcade.SpriteSolidColor(
                 width=width,
                 height=height,
@@ -387,8 +445,6 @@ def make_game(
 
 
 def run(game: GameView) -> None:
-    # if not game.ground_list:  # add ground if there are no platforms
-    #     game.make_ground()
     game.setup_physics()
     game.window.show_view(game)
     arcade.run()

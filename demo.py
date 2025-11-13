@@ -1,6 +1,8 @@
+"""A demo of how to build a level using the engine."""
+
 from engine import *
 
-window = make_window(title="Sidecroller Demo")
+window = make_window(title="Sidescroller Demo")
 
 game = make_game(window)
 
